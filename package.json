@@ -1,0 +1,53 @@
+{
+  "name": "tauri-react-python-template",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "node scripts/backend_dev.mjs",
+    "build": "tsc -b && vite build",
+    "build:backend": "node scripts/run_project_python.mjs scripts/build_backend.py",
+    "release:stage": "node scripts/run_project_python.mjs scripts/stage_release.py",
+    "release:portable": "node scripts/build_release.mjs",
+    "release:smoke": "node scripts/run_project_python.mjs scripts/smoke_portable_release.py",
+    "post:bundle": "node scripts/run_project_python.mjs scripts/post_bundle.py",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "node scripts/tauri_dev.mjs",
+    "tauri:build": "npm run release:portable",
+    "project:init": "node scripts/init_project.mjs",
+    "version:bump": "node scripts/run_project_python.mjs scripts/bump_version.py",
+    "check:utf8": "node scripts/run_project_python.mjs scripts/check_utf8.py",
+    "check:utf8:strict": "node scripts/run_project_python.mjs scripts/check_utf8.py --require-no-bom"
+  },
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@tauri-apps/api": "2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "@types/marked": "^5.0.2",
+    "katex": "^0.16.44",
+    "marked": "^17.0.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tauri-apps/cli": "2.10.1",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vite": "^8.0.4"
+  }
+}

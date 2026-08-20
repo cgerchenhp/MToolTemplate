@@ -1,0 +1,5 @@
+fastapi==0.135.2
+pydantic==2.12.5
+pydantic_core==2.41.5
+pyinstaller==6.21.0
+uvicorn==0.42.0

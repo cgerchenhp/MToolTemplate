@@ -1,0 +1,8 @@
+{
+  "displayName": "Tauri React Python Template",
+  "projectId": "tauri-react-python-template",
+  "identifier": "com.example.tauri-react-python-template",
+  "preferredDevPort": 5175,
+  "backendPort": 7090,
+  "closeToTray": false
+}

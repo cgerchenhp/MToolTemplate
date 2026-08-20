@@ -1,0 +1,69 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: Dev",
+      "type": "process",
+      "command": "npm",
+      "args": ["run", "dev:backend"],
+      "windows": {
+        "command": "npm.cmd"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "\\[backend\\]",
+          "endsPattern": "Application startup complete\\."
+        }
+      },
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated",
+        "reveal": "always",
+        "label": "Backend"
+      }
+    },
+    {
+      "label": "Frontend: Tauri Dev",
+      "type": "shell",
+      "command": "npm run tauri:dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": ".*"
+        }
+      },
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated",
+        "reveal": "always",
+        "label": "Frontend"
+      }
+    },
+    {
+      "label": "Dev: Start All",
+      "dependsOn": ["Backend: Dev", "Frontend: Tauri Dev"],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "never"
+      }
+    },
+    {
+      "label": "Build: Release",
+      "type": "npm",
+      "script": "tauri:build",
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Build the Tauri app and bundled Python backend."
+    }
+  ]
+}
