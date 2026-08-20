@@ -15,8 +15,10 @@ backend/
 │   ├── log.py           # 日志初始化（init_logging / get_log_queue）
 ├── routers/             # 按业务域拆分的路由模块
 │   ├── __init__.py
-└── requirements.txt     # 运行时依赖
+└── tests/               # 后端自动化测试
 ```
+
+运行时与构建依赖统一位于项目根目录的 `requirements.txt`。
 
 ---
 
@@ -24,7 +26,7 @@ backend/
 
 ```bash
 # 安装依赖
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 
 # 启动开发服务
 python backend/main.py

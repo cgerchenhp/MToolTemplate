@@ -238,6 +238,36 @@ Windows 的 `backend.exe` 不再与主程序同目录；Rust 壳会从 `_interna
 npm run release:smoke
 ```
 
+## 发布归档与硬盘清理
+
+发布验证完成后，建议先把 Portable 目录压缩为带版本号的归档：
+
+```bash
+npm run release:archive
+```
+
+归档输出到 `artifacts/<project-id>-v<version>-<platform>-portable.zip`，并生成对应的 `.sha256` 校验文件。归档只包含可交付 Portable 内容，不包含 Cargo、Vite、PyInstaller 等构建中间文件。
+
+清理命令按风险分为两级：
+
+```bash
+# 只统计可回收空间，不删除文件
+npm run storage:report
+
+# 删除 debug/release 中间构建、dist、PyInstaller staging、测试和工具缓存
+# 保留 release-portable 与 artifacts
+npm run cleanup
+
+# 预览深度清理范围
+npm run storage:report -- --deep
+
+# 长期停止开发时使用：额外删除整个 Cargo target、release-portable、node_modules 和 .venv
+# 始终保留 artifacts 与项目源码
+npm run cleanup:deep
+```
+
+也可以执行 `npm run cleanup -- --dry-run` 预览普通清理。深度清理后，再次开发需要运行 `npm install`，并重新创建 `.venv`、安装 `requirements.txt`。推荐的发布收尾顺序为：`release:smoke` → `release:archive` → `cleanup`；确定近期不再开发时再执行 `cleanup:deep`。
+
 ## 测试
 
 ```bash

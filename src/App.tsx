@@ -160,7 +160,9 @@ function App() {
               className="px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >＋</button>
           </span>
-          <span className="text-xs text-gray-400 select-none ">Tauri React Python Template © 2026</span>
+          <span className="text-xs text-gray-400 select-none ">
+            Tauri React Python Template © {new Date().getFullYear()}
+          </span>
           <BackendStatusBadge
             status={backendStatus.status}
             latency={backendStatus.latency}

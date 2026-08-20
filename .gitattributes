@@ -1,8 +1,8 @@
-* text=auto 
+* text=auto eol=lf
 
 # Windows 脚本通常必须使用 CRLF
-*.bat  text eol=crlf
-*.cmd  text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
 
 # Shell 脚本必须使用 LF
-*.sh   text eol=lf
+*.sh text eol=lf

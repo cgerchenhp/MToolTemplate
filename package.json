@@ -1,7 +1,12 @@
 {
   "name": "tauri-react-python-template",
   "private": true,
+  "description": "Reusable Tauri 2, React, and FastAPI desktop application template.",
+  "license": "MIT",
   "version": "0.2.0",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +15,7 @@
     "build:backend": "node scripts/run_project_python.mjs scripts/build_backend.py",
     "release:stage": "node scripts/run_project_python.mjs scripts/stage_release.py",
     "release:portable": "node scripts/build_release.mjs",
+    "release:archive": "node scripts/run_project_python.mjs scripts/archive_release.py",
     "release:smoke": "node scripts/run_project_python.mjs scripts/smoke_portable_release.py",
     "post:bundle": "node scripts/run_project_python.mjs scripts/post_bundle.py",
     "lint": "eslint .",
@@ -19,6 +25,9 @@
     "tauri:build": "npm run release:portable",
     "project:init": "node scripts/init_project.mjs",
     "version:bump": "node scripts/run_project_python.mjs scripts/bump_version.py",
+    "storage:report": "node scripts/cleanup_workspace.mjs report",
+    "cleanup": "node scripts/cleanup_workspace.mjs build",
+    "cleanup:deep": "node scripts/cleanup_workspace.mjs deep",
     "check:utf8": "node scripts/run_project_python.mjs scripts/check_utf8.py",
     "check:utf8:strict": "node scripts/run_project_python.mjs scripts/check_utf8.py --require-no-bom"
   },
