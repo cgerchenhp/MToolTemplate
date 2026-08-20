@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { listen } from '@tauri-apps/api/event'
-import { useDragActive } from '../../lib/dragContext'
+import { useDragActive } from '../../hooks/useDragActive'
 import { isTauri } from '../../lib/api'
 
 export interface FileDropZoneProps {

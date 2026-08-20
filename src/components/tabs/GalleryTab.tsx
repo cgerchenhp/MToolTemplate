@@ -16,14 +16,18 @@ import { DirPicker } from '../ui/DirPicker'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { Alert } from '../ui/Alert'
-import { JsonTree, smart_expand_json } from '../ui/JsonTree'
+import { JsonTree } from '../ui/JsonTree'
+import { smart_expand_json } from '../ui/jsonTreeUtils'
 import { MarkdownView } from '../ui/MarkdownView'
-import { ImageView, pixelsToDataUrl } from '../ui/ImageView'
+import { FileTree, type FileTreeNode } from '../ui/FileTree'
+import { AsyncWaitingNotice } from '../ui/AsyncWaitingNotice'
+import { ImageView } from '../ui/ImageView'
+import { pixelsToDataUrl } from '../ui/imageUtils'
 import { ImageGrid } from '../ui/ImageGrid'
 import { MetricCard } from '../ui/MetricCard'
 import { PopoverPanel, WrenchIcon } from '../ui/PopoverPanel'
 import { SegmentedTabs } from '../ui/SegmentedTabs'
-import { useNotify } from '../ui/NotificationStack'
+import { useNotify } from '../../hooks/useNotification'
 import { buildRenderedHtmlDocument, downloadHtml } from '../ui/renderedHtmlExport'
 import { open as shellOpen } from '@tauri-apps/plugin-shell'
 
@@ -58,6 +62,28 @@ def hello(name: str) -> str:
 \`\`\`
 `
 
+const DEMO_FILE_TREE: FileTreeNode[] = [
+  {
+    id: 'docs',
+    name: 'docs',
+    type: 'directory',
+    children: [
+      { name: 'getting-started.md', type: 'file', path: '/docs/getting-started.md' },
+      { name: 'configuration.md', type: 'file', path: '/docs/configuration.md' },
+      {
+        id: 'guides',
+        name: 'guides',
+        type: 'directory',
+        children: [
+          { name: 'build.md', type: 'file', path: '/docs/guides/build.md' },
+          { name: 'release.md', type: 'file', path: '/docs/guides/release.md' },
+        ],
+      },
+    ],
+  },
+  { name: 'README.md', type: 'file', path: '/README.md' },
+]
+
 // ── Component ────────────────────────────────────────────────────────────────
 export function GalleryTab() {
   // ── 输入控件状态 ──────────────────────────────────────────────
@@ -70,6 +96,7 @@ export function GalleryTab() {
   const [filePath, setFilePath] = useState('')
   const [dirPath, setDirPath] = useState('')
   const [dropImageSrc, setDropImageSrc] = useState<string | null>(null)
+  const [selectedTreePath, setSelectedTreePath] = useState('/docs/getting-started.md')
   // ── PopoverPanel 受控模式演示状态 ────────────────────
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [popoverText, setPopoverText] = useState('hello')
@@ -196,9 +223,36 @@ export function GalleryTab() {
       {/* ── MarkdownView ─────────────────────────────────────── */}
       <FeaturePanel
         title="MarkdownView"
-        description="Markdown 渲染控件，右上角提供「复制 MD」按钮，复制原始文本"
+        description="安全 Markdown 渲染、标题锚点、文档导航、复制原文与超长文档渐进渲染"
       >
         <MarkdownView value={DEMO_MD} className="max-h-64 overflow-auto" />
+      </FeaturePanel>
+
+      <FeaturePanel
+        title="FileTree"
+        description="递归目录、自动展开选中路径、目录吸顶，并支持 Ctrl/Cmd 对照选择"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="max-h-44 overflow-auto rounded border border-gray-200 bg-gray-50 py-1 dark:border-gray-700 dark:bg-gray-950">
+            <FileTree
+              tree={DEMO_FILE_TREE}
+              selectedPath={selectedTreePath}
+              onSelectFile={path => setSelectedTreePath(path)}
+              stripExtensions={['.md']}
+              autoRevealSelected
+            />
+          </div>
+          <div className="rounded border border-gray-200 bg-white p-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            当前选择：<span className="font-mono text-blue-600 dark:text-blue-400">{selectedTreePath}</span>
+          </div>
+        </div>
+      </FeaturePanel>
+
+      <FeaturePanel
+        title="AsyncWaitingNotice"
+        description="可配置分阶段文案、耗时显示和紧凑布局，适合搜索、AI 推理与文件处理"
+      >
+        <AsyncWaitingNotice compact title="正在生成预览…" />
       </FeaturePanel>
 
       <FeaturePanel title="SegmentedTabs + MetricCard" description="页内视图切换与仪表盘统计卡片">
@@ -467,7 +521,7 @@ export function GalleryTab() {
         </div>
       </FeaturePanel>
 
-      <FeaturePanel title="ImageGrid + HTML 导出" description="图片灯箱支持 Esc、左右方向键；导出工具生成可离线打开的 HTML 快照">
+      <FeaturePanel title="ImageGrid + HTML 导出" description="图片灯箱支持缩放、平移和键盘导航；导出工具生成可离线打开的 HTML 快照">
         <div className="space-y-3">
           <ImageGrid images={[{ src: demoPixelSrc, alt: '64 × 64 渐变示例' }]} />
           <div ref={exportPreviewRef} className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">

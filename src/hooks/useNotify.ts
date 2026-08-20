@@ -28,7 +28,9 @@ export interface NotifyMessage {
 export function useNotify(onMessage: (msg: NotifyMessage) => void): void {
   // 使用 ref 持有最新回调，避免重新创建 EventSource
   const callbackRef = useRef(onMessage)
-  callbackRef.current = onMessage
+  useEffect(() => {
+    callbackRef.current = onMessage
+  }, [onMessage])
 
   useEffect(() => {
     let es: EventSource | null = null

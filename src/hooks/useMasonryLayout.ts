@@ -56,6 +56,8 @@ export function useMasonryLayout(cardCount: number, colMinWidth = 388, gap = 8):
   // 使用 useLayoutEffect 确保 positions 在第一帧就已就绪，
   // 避免首帧 visibility:hidden → 下一帧才可见 导致的高 LCP。
   useLayoutEffect(() => {
+    // DOM measurement must synchronously update layout before the browser paints.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     recalculate()
   }, [recalculate])
 

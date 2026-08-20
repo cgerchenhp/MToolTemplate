@@ -1,39 +1,6 @@
 import { useRef, useState } from 'react'
 import { FileDropZone } from './FileDropZone'
-import { useDragActive } from '../../lib/dragContext'
-
-// ── Utility ──────────────────────────────────────────────────────────────────
-
-/**
- * Convert raw RGBA pixel data to a PNG data URL via an off-screen Canvas.
- *
- * @param pixels  RGBA bytes: 4 bytes per pixel, row-major order.
- *                Accepts Uint8ClampedArray, Uint8Array, or number[].
- * @param width   Image width in pixels.
- * @param height  Image height in pixels.
- * @returns       `data:image/png;base64,…` string, ready to use as `<img src>`.
- *
- * @example
- * // Backend sends { pixels: [...], width: 64, height: 64 }
- * const dataUrl = pixelsToDataUrl(response.pixels, response.width, response.height)
- * setImageSrc(dataUrl)
- */
-export function pixelsToDataUrl(
-  pixels: Uint8ClampedArray | Uint8Array | number[],
-  width: number,
-  height: number,
-): string {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D context not available')
-  // Always construct from plain Array to guarantee Uint8ClampedArray<ArrayBuffer>
-  // (avoids SharedArrayBuffer type incompatibility with ImageData constructor)
-  const clamped = new Uint8ClampedArray(Array.isArray(pixels) ? pixels : Array.from(pixels))
-  ctx.putImageData(new ImageData(clamped, width, height), 0, 0)
-  return canvas.toDataURL('image/png')
-}
+import { useDragActive } from '../../hooks/useDragActive'
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +53,7 @@ interface ImageViewProps {
  * ImageView — image display + optional file-drop zone.
  *
  * Accepts data URLs (base64), file paths, and HTTP URLs as `src`.
- * Use the exported `pixelsToDataUrl()` helper to convert raw RGBA pixel arrays
+ * Use `pixelsToDataUrl()` from `imageUtils` to convert raw RGBA pixel arrays
  * (e.g. from a backend pixel buffer) into a data URL before passing here.
  *
  * @example

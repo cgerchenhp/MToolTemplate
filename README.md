@@ -197,10 +197,12 @@ Gallery 页签中展示了所有可用组件：
 - **容器**: `FeaturePanel`, `CollapsibleSection`
 - **表单**: `TextInput`, `NumberInput`, `TextareaInput`, `ColorField`, `CheckboxField`, `SelectField`, `RadioGroup`
 - **选择器**: `FilePicker`, `DirPicker`, `FileDropZone`
-- **显示**: `ImageView`, `ImageGrid`, `ClickableImage`, `JsonTree`, `MarkdownView`, `Badge`, `Alert`, `MetricCard`
+- **显示**: `ImageView`, `ImageGrid`, `ClickableImage`, `JsonTree`, `MarkdownView`, `FileTree`, `Badge`, `Alert`, `MetricCard`
 - **布局**: `FormField`, `InfoRow`, `SectionTitle`, `FrameStatusBar`, `SegmentedTabs`
-- **交互**: `Button`, `PopoverPanel`, `NotificationStack`, `renderedHtmlExport`
+- **交互**: `Button`, `PopoverPanel`, `NotificationStack`, `AsyncWaitingNotice`, `renderedHtmlExport`
 - **系统**: `TitleBar`, `ThemeButton`, `BackendStatusBadge`, `ConsolePanel`, `Tabs`
+
+其中 `ClickableImage` 的灯箱支持缩放、平移和多图键盘导航；`MarkdownView` 默认执行 URL/HTML 安全清理，并支持标题锚点、本地文档导航和超长内容渐进渲染；`FileTree` 可通过 `renderLabel`、`stripExtensions`、`allowCompare` 等属性适配不同类型的层级资源。`TitleBar` 提供应用标题、版本标签、中部文档身份和操作区插槽，`Tabs` 同时支持内部懒挂载和外部受控的 `mountedTabs`。
 
 ## 生产构建
 

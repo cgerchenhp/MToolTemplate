@@ -50,19 +50,21 @@ export function CollapsibleSection({
 
   // Use a ref to always hold the latest onOpenChange, avoiding stale closures
   const onOpenChangeRef = useRef(onOpenChange)
-  useEffect(() => { onOpenChangeRef.current = onOpenChange })
+  useEffect(() => { onOpenChangeRef.current = onOpenChange }, [onOpenChange])
 
-  // When a parent Ctrl+Clicks and forces us open/closed, sync our state and propagate further
+  // Derive the recursive override instead of copying it into local state in an effect.
+  // The section's own state is preserved for when the parent releases the override.
+  const effectiveOpen = forcedByParent ?? open
+  const effectiveChildForce = forcedByParent ?? childForce
+
   useEffect(() => {
     if (forcedByParent !== null) {
-      setOpen(forcedByParent)
-      setChildForce(forcedByParent)
       onOpenChangeRef.current?.(forcedByParent)
     }
   }, [forcedByParent])
 
   function handleClick(e: React.MouseEvent) {
-    const next = !open
+    const next = !effectiveOpen
     setOpen(next)
     onOpenChange?.(next)
     if (e.ctrlKey || e.metaKey) {
@@ -75,7 +77,7 @@ export function CollapsibleSection({
   }
 
   return (
-    <CollapsibleForceCtx.Provider value={childForce}>
+    <CollapsibleForceCtx.Provider value={effectiveChildForce}>
     <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700/60">
       {/* ── Header ─────────────────────────────────────────────── */}
       <button
@@ -88,7 +90,7 @@ export function CollapsibleSection({
         {/* Chevron */}
         <svg
           className={`h-3 w-3 shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-150 ${
-            open ? 'rotate-90' : ''
+            effectiveOpen ? 'rotate-90' : ''
           }`}
           viewBox="0 0 16 16"
           fill="currentColor"
@@ -97,7 +99,7 @@ export function CollapsibleSection({
         </svg>
 
         {/* Collapsed preview icon — hidden when expanded */}
-        {!open && icon && (
+        {!effectiveOpen && icon && (
           typeof icon === 'string' ? (
             <img
               src={icon}
@@ -115,7 +117,7 @@ export function CollapsibleSection({
         </span>
 
         {/* Summary — only visible when collapsed */}
-        {!open && summary && (
+        {!effectiveOpen && summary && (
           <span className="text-xs text-gray-400 dark:text-gray-500 truncate ml-2 max-w-[50%] text-right">
             {summary}
           </span>
@@ -123,7 +125,7 @@ export function CollapsibleSection({
       </button>
 
       {/* ── Body ───────────────────────────────────────────────── */}
-      {open && (
+      {effectiveOpen && (
         <div className="border-l-2 border-blue-400 dark:border-blue-500 bg-white dark:bg-gray-900">
           {children}
         </div>

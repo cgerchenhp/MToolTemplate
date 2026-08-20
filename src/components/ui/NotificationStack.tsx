@@ -1,6 +1,5 @@
-﻿import {
+import {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -29,33 +28,55 @@ interface NotificationItem {
   exiting: boolean
 }
 
-// ── Context hook ──────────────────────────────────────────────────────────────
-
-export function useNotify(): NotifyFn {
-  const ctx = useContext(NotificationContext)
-  if (!ctx) throw new Error('useNotify must be used inside <NotificationProvider>')
-  return ctx
-}
-
 // ── Provider ─────────────────────────────────────────────────────────────────
 
 const EXIT_MS = 350
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<NotificationItem[]>([])
+function useNotificationTimers() {
   const autoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
+  const cancelAutoTimer = useCallback((id: string) => {
+    const timer = autoTimers.current.get(id)
+    if (!timer) return
+    clearTimeout(timer)
+    autoTimers.current.delete(id)
+  }, [])
+  const setAutoTimer = useCallback((id: string, timer: ReturnType<typeof setTimeout>) => {
+    autoTimers.current.set(id, timer)
+  }, [])
+  const setExitTimer = useCallback((id: string, timer: ReturnType<typeof setTimeout>) => {
+    exitTimers.current.set(id, timer)
+  }, [])
+  const deleteExitTimer = useCallback((id: string) => {
+    exitTimers.current.delete(id)
+  }, [])
+
+  useEffect(() => {
+    const auto = autoTimers.current
+    const exit = exitTimers.current
+    return () => {
+      auto.forEach(clearTimeout)
+      exit.forEach(clearTimeout)
+    }
+  }, [])
+
+  return { cancelAutoTimer, deleteExitTimer, setAutoTimer, setExitTimer }
+}
+
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<NotificationItem[]>([])
+  const { cancelAutoTimer, deleteExitTimer, setAutoTimer, setExitTimer } = useNotificationTimers()
+
   const dismiss = useCallback((id: string) => {
-    const auto = autoTimers.current.get(id)
-    if (auto) { clearTimeout(auto); autoTimers.current.delete(id) }
+    cancelAutoTimer(id)
     setItems(prev => prev.map(n => n.id === id ? { ...n, exiting: true } : n))
     const t = setTimeout(() => {
       setItems(prev => prev.filter(n => n.id !== id))
-      exitTimers.current.delete(id)
+      deleteExitTimer(id)
     }, EXIT_MS)
-    exitTimers.current.set(id, t)
-  }, [])
+    setExitTimer(id, t)
+  }, [cancelAutoTimer, deleteExitTimer, setExitTimer])
 
   const notify = useCallback((message: string, options?: NotifyOptions) => {
     const id = crypto.randomUUID()
@@ -65,22 +86,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       { id, level: options?.level ?? 'info', title: options?.title, message, duration, action: options?.action, exiting: false },
     ])
     const t = setTimeout(() => dismiss(id), duration)
-    autoTimers.current.set(id, t)
-  }, [dismiss])
-
-  useEffect(() => {
-    const auto = autoTimers.current
-    const exit = exitTimers.current
-    return () => { auto.forEach(clearTimeout); exit.forEach(clearTimeout) }
-  }, [])
+    setAutoTimer(id, t)
+  }, [dismiss, setAutoTimer])
 
   const notifyFn = useMemo<NotifyFn>(() => {
-    const fn = ((msg: string, opts?: NotifyOptions) => notify(msg, opts)) as NotifyFn
-    fn.info    = (msg, title) => notify(msg, { level: 'info',    title })
-    fn.success = (msg, title) => notify(msg, { level: 'success', title })
-    fn.warning = (msg, title) => notify(msg, { level: 'warning', title })
-    fn.error   = (msg, title) => notify(msg, { level: 'error',   title })
-    return fn
+    return Object.assign(
+      (message: string, options?: NotifyOptions) => notify(message, options),
+      {
+        info: (message: string, title?: string) => notify(message, { level: 'info', title }),
+        success: (message: string, title?: string) => notify(message, { level: 'success', title }),
+        warning: (message: string, title?: string) => notify(message, { level: 'warning', title }),
+        error: (message: string, title?: string) => notify(message, { level: 'error', title }),
+      },
+    )
   }, [notify])
 
   return (

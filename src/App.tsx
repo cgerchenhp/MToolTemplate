@@ -13,7 +13,7 @@ import { useHotkey } from './hooks/useHotkey'
 import { useUiScale } from './hooks/useUiScale'
 import { NotificationProvider } from './components/ui/NotificationStack'
 import { TitleBar } from './components/ui/TitleBar'
-import { DragProvider } from './lib/dragContext'
+import { DragProvider } from './lib/DragProvider'
 
 import './App.css'
 

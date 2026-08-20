@@ -3,6 +3,7 @@ import {
   type MouseEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
+import type { ExpandState } from './jsonTreeUtils'
 
 /**
  * JsonTree — JSON 树状结构查看器
@@ -18,71 +19,6 @@ import { createPortal } from 'react-dom'
  *   "chunks[2]"                     → 根级数组元素
  *   "text_chunks/actions[0]/desc"   → 混合路径
  */
-
-export type ExpandState = Record<string, boolean>
-
-// ─────────────────────────────────────────────────────────────────────────────
-// smart_expand_json — 根据内容自动计算折叠状态
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** 这些键对应的节点默认折叠（通常是大型二进制/哈希列表等噪音数据） */
-const _COLLAPSE_KEYS = new Set([
-  'chunks',          // PNG 原始 Chunk 列表（通常 35+ 个 IDAT）
-  'c2pa.hash.boxes', // 每个 Chunk 的 SHA-256 哈希列表
-  'c2pa.hash.data',  // 数据哈希详情
-])
-
-function _build(value: unknown, path: string, depth: number, out: ExpandState): void {
-  if (value === null || typeof value !== 'object') return
-
-  const isArr = Array.isArray(value)
-  const size = isArr
-    ? (value as unknown[]).length
-    : Object.keys(value as Record<string, unknown>).length
-
-  // 数组元素（path 末尾含 [N]）不做 key 规则匹配，只做尺寸/深度规则
-  const isArrayItem = /\[\d+\]$/.test(path)
-  const key = isArrayItem ? '' : (path.split('/').at(-1) ?? '')
-
-  let open = true
-  if (_COLLAPSE_KEYS.has(key)) open = false
-  else if (isArr && size > 8) open = false
-  else if (depth >= 3) open = false
-  else if (depth >= 2 && size > 5) open = false
-
-  out[path] = open
-
-  // 始终递归，使子节点也有预设状态（即使父节点折叠）
-  if (isArr) {
-    ;(value as unknown[]).forEach((item, i) => {
-      const childPath = path ? `${path}[${i}]` : `[${i}]`
-      _build(item, childPath, depth + 1, out)
-    })
-  } else {
-    Object.entries(value as Record<string, unknown>).forEach(([k, v]) => {
-      const childPath = path ? `${path}/${k}` : k
-      _build(v, childPath, depth + 1, out)
-    })
-  }
-}
-
-/**
- * 根据 JSON 内容计算默认展开/折叠状态。
- *
- * 策略：
- * - 深度 0-1：全部展开
- * - 深度 2，节点 ≤ 5 个键：展开；否则折叠
- * - 深度 ≥ 3：折叠
- * - 超过 8 项的数组：折叠
- * - 特定语义 key（chunks, c2pa.hash.boxes 等）：折叠
- *
- * @returns ExpandState — 可直接传给 JsonTree.initialExpandState
- */
-export function smart_expand_json(value: unknown): ExpandState {
-  const out: ExpandState = {}
-  _build(value, '', 0, out)
-  return out
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 内部渲染组件
@@ -434,6 +370,8 @@ interface JsonTreeProps {
   className?: string
 }
 
+const EMPTY_EXPAND_STATE: ExpandState = {}
+
 /**
  * JsonTree — 交互式 JSON 树状查看器。
  *
@@ -448,19 +386,23 @@ interface JsonTreeProps {
  * const expandState = smart_expand_json(data)
  * <JsonTree value={data} initialExpandState={expandState} />
  */
-export function JsonTree({ value, initialExpandState = {}, truncateStrings = true, className }: JsonTreeProps) {
+export function JsonTree({
+  value,
+  initialExpandState = EMPTY_EXPAND_STATE,
+  truncateStrings = true,
+  className,
+}: JsonTreeProps) {
   const [state, setState] = useState<ExpandState>(initialExpandState)
   const [hoveredPath, setHoveredPath] = useState('')
-  const prevRef = useRef<ExpandState>(initialExpandState)
+  const [previousInitialState, setPreviousInitialState] = useState(initialExpandState)
 
-  // 当 initialExpandState 引用变化时（如加载新数据），重置内部状态
-  useEffect(() => {
-    if (prevRef.current !== initialExpandState) {
-      prevRef.current = initialExpandState
-      setState(initialExpandState)
-      setHoveredPath('')
-    }
-  }, [initialExpandState])
+  // React recommends guarded render-time adjustment when state must track a prop.
+  // This avoids an extra stale render and a synchronous state update in an effect.
+  if (previousInitialState !== initialExpandState) {
+    setPreviousInitialState(initialExpandState)
+    setState(initialExpandState)
+    setHoveredPath('')
+  }
 
   // 稳定引用：避免 hover 时重建函数导致所有 TreeNode 重渲
   const toggle = useCallback((path: string) => {
