@@ -89,7 +89,7 @@ function App() {
   return (
     <DragProvider>
     <NotificationProvider>
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 transition-colors duration-200 dark:bg-gray-950">
       {/* Custom Title Bar */}
       {isTauri && (isWindows || isMacOS) && <TitleBar platform={isWindows ? 'windows' : 'macos'} />}
 

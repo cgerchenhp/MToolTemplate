@@ -4,6 +4,28 @@
 /* Enable class-based dark mode: add .dark to <html> to activate */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Keep the desktop shell bound to the WebView viewport. Long tab content must
+ * scroll inside Tabs instead of creating a second document-level scrollbar.
+ */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
 /* ── Notification toast animations ────────────────────────────────────────── */
 @keyframes toast-in {
   from { transform: translateX(110%); opacity: 0; }
@@ -31,3 +53,35 @@
 .scrollbar-dark::-webkit-scrollbar-track  { background: #1f2937; border-radius: 3px; }
 .scrollbar-dark::-webkit-scrollbar-thumb  { background: #4b5563; border-radius: 3px; }
 .scrollbar-dark::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+/* Global dark-mode scrollbar for the window and all nested overflow areas. */
+html.dark {
+  color-scheme: dark;
+  scrollbar-color: #374151 #1e293b;
+  scrollbar-width: thin;
+}
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-corner {
+  background: #1e293b;
+}

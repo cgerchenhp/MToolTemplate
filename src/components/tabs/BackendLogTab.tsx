@@ -49,7 +49,7 @@ interface BackendLogTabProps {
 
 export function BackendLogTab({ lines }: BackendLogTabProps) {
   const [minLevel, setMinLevel] = useState<MinLevel>("ALL");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const logViewportRef = useRef<HTMLDivElement>(null);
 
   const filtered = lines.filter((line) => {
     const rank = LEVEL_RANK[line.level] ?? 1;
@@ -57,7 +57,8 @@ export function BackendLogTab({ lines }: BackendLogTabProps) {
   });
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "instant" });
+    const viewport = logViewportRef.current;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, [filtered]);
 
   return (
@@ -84,7 +85,10 @@ export function BackendLogTab({ lines }: BackendLogTabProps) {
       </div>
 
       {/* ── Log lines ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-1.5 font-mono text-[11px] select-text">
+      <div
+        ref={logViewportRef}
+        className="flex-1 min-h-0 overflow-y-auto px-2 py-1.5 font-mono text-[11px] select-text"
+      >
         {filtered.length === 0 ? (
           <p className="text-gray-600 italic">暂无日志…</p>
         ) : (
@@ -97,7 +101,6 @@ export function BackendLogTab({ lines }: BackendLogTabProps) {
             </div>
           ))
         )}
-        <div ref={bottomRef} />
       </div>
     </div>
   );

@@ -9,9 +9,10 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "icon:sync": "node scripts/sync_app_icon.mjs",
+    "dev": "npm run icon:sync && vite",
     "dev:backend": "node scripts/backend_dev.mjs",
-    "build": "tsc -b && vite build",
+    "build": "npm run icon:sync && tsc -b && vite build",
     "build:backend": "node scripts/run_project_python.mjs scripts/build_backend.py",
     "release:stage": "node scripts/run_project_python.mjs scripts/stage_release.py",
     "release:portable": "node scripts/build_release.mjs",

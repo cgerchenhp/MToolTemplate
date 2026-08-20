@@ -46,7 +46,7 @@ export function Tabs({
   const effectiveMounted = mountedTabs ?? internalMounted
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {showTabBar && (
         <div
           className="flex shrink-0 items-center border-b border-gray-200 bg-white transition-colors dark:border-gray-700 dark:bg-gray-900"
@@ -79,7 +79,7 @@ export function Tabs({
               key={panel.id}
               role="tabpanel"
               hidden={panel.id !== activeTab}
-              className={panel.id !== activeTab ? 'hidden' : 'h-full overflow-y-auto'}
+              className={panel.id !== activeTab ? 'hidden' : 'h-full min-h-0 overflow-y-auto overscroll-contain'}
             >
               {panel.content}
             </div>

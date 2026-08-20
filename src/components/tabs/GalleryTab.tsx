@@ -9,8 +9,10 @@ import { TextInput } from '../ui/TextInput'
 import { TextareaInput } from '../ui/TextareaInput'
 import { NumberInput } from '../ui/NumberInput'
 import { ColorField } from '../ui/ColorField'
+import { NullableColorField } from '../ui/NullableColorField'
 import { CheckboxField } from '../ui/CheckboxField'
 import { SelectField } from '../ui/SelectField'
+import { RadioGroup } from '../ui/RadioGroup'
 import { FilePicker } from '../ui/FilePicker'
 import { DirPicker } from '../ui/DirPicker'
 import { Button } from '../ui/Button'
@@ -25,6 +27,7 @@ import { ImageView } from '../ui/ImageView'
 import { pixelsToDataUrl } from '../ui/imageUtils'
 import { ImageGrid } from '../ui/ImageGrid'
 import { MetricCard } from '../ui/MetricCard'
+import { FrameStatusBar, type FrameDot } from '../ui/FrameStatusBar'
 import { PopoverPanel, WrenchIcon } from '../ui/PopoverPanel'
 import { SegmentedTabs } from '../ui/SegmentedTabs'
 import { useNotify } from '../../hooks/useNotification'
@@ -84,6 +87,19 @@ const DEMO_FILE_TREE: FileTreeNode[] = [
   { name: 'README.md', type: 'file', path: '/README.md' },
 ]
 
+const FRAME_STATUS_SEQUENCE: FrameDot['status'][] = [
+  'completed',
+  'completed',
+  'discarded',
+  'completed',
+  'failed',
+]
+
+const DEMO_FRAMES: FrameDot[] = Array.from({ length: 42 }, (_, index) => ({
+  id: 42 - index,
+  status: index === 0 ? 'processing' : FRAME_STATUS_SEQUENCE[index % FRAME_STATUS_SEQUENCE.length],
+}))
+
 // ── Component ────────────────────────────────────────────────────────────────
 export function GalleryTab() {
   // ── 输入控件状态 ──────────────────────────────────────────────
@@ -91,8 +107,10 @@ export function GalleryTab() {
   const [textarea, setTextarea] = useState('第一行\n第二行')
   const [number, setNumber] = useState(42)
   const [color, setColor] = useState('#3B82F6')
+  const [nullableColor, setNullableColor] = useState<string | null>(null)
   const [checked, setChecked] = useState(true)
   const [select, setSelect] = useState('png')
+  const [processingMode, setProcessingMode] = useState<'fast' | 'balanced' | 'quality'>('balanced')
   const [filePath, setFilePath] = useState('')
   const [dirPath, setDirPath] = useState('')
   const [dropImageSrc, setDropImageSrc] = useState<string | null>(null)
@@ -120,23 +138,34 @@ export function GalleryTab() {
   }
 
 
-  // Demo: generate a tiny gradient pixel image via pixelsToDataUrl
-  const demoPixelSrc = (() => {
+  // Demo: generate tiny gradient images via pixelsToDataUrl.
+  const demoImages = (() => {
     const w = 64, h = 64
-    const pixels: number[] = []
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        pixels.push(Math.round((x / w) * 255), Math.round((y / h) * 255), 128, 255)
+    const variants: Array<{
+      alt: string
+      pixel: (x: number, y: number) => [number, number, number, number]
+    }> = [
+      { alt: '红绿渐变', pixel: (x, y) => [x, y, 128, 255] },
+      { alt: '绿蓝渐变', pixel: (x, y) => [80, x, y, 255] },
+      { alt: '蓝红渐变', pixel: (x, y) => [y, 96, x, 255] },
+    ]
+    return variants.map(({ alt, pixel }) => {
+      const pixels: number[] = []
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          pixels.push(...pixel(
+            Math.round((x / (w - 1)) * 255),
+            Math.round((y / (h - 1)) * 255),
+          ))
+        }
       }
-    }
-    return pixelsToDataUrl(pixels, w, h)
+      return { src: pixelsToDataUrl(pixels, w, h), alt }
+    })
   })()
+  const demoPixelSrc = demoImages[0].src
 
   return (
     <div className="p-2 space-y-2 max-w-3xl mx-auto">
-
-      {/* ── Screen Capture ───────────────────────────────────── */}
-      
 
       {/* ── FeaturePanel ─────────────────────────────────────── */}
       <FeaturePanel
@@ -277,8 +306,18 @@ export function GalleryTab() {
         </div>
       </FeaturePanel>
 
+      <FeaturePanel
+        title="FrameStatusBar"
+        description="以紧凑状态点展示批处理进度、结果统计和最近帧截断"
+      >
+        <FrameStatusBar frames={DEMO_FRAMES} maxVisible={32} />
+      </FeaturePanel>
+
       {/* ── 输入控件 ─────────────────────────────────────────── */}
-      <FeaturePanel title="输入控件" description="TextInput · NumberInput · TextareaInput · ColorField · CheckboxField">
+      <FeaturePanel
+        title="输入控件"
+        description="文本、数字、必填/可空颜色、复选框和单选组"
+      >
         <div className="space-y-3">
           <FormField label="单行文本">
             <TextInput value={text} onChange={setText} placeholder="请输入文字…" />
@@ -286,20 +325,36 @@ export function GalleryTab() {
           <FormField label="多行文本">
             <TextareaInput value={textarea} onChange={setTextarea} rows={3} placeholder="请输入多行内容…" />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="数字" hint="(0–100)">
               <NumberInput value={number} onChange={(v) => setNumber(Number(v))} min={0} max={100} />
             </FormField>
             <FormField label="颜色">
               <ColorField value={color} onChange={setColor} />
             </FormField>
+            <FormField label="可空颜色" hint={nullableColor === null ? '未设置' : undefined}>
+              <NullableColorField value={nullableColor} onChange={setNullableColor} />
+            </FormField>
           </div>
           <CheckboxField checked={checked} onChange={setChecked} label="启用高级选项（CheckboxField）" />
+          <FormField label="处理模式">
+            <RadioGroup
+              name="gallery-processing-mode"
+              value={processingMode}
+              onChange={setProcessingMode}
+              horizontal
+              options={[
+                { value: 'fast', label: '快速', description: '低延迟' },
+                { value: 'balanced', label: '均衡' },
+                { value: 'quality', label: '高质量', description: '更精细' },
+              ]}
+            />
+          </FormField>
         </div>
       </FeaturePanel>
 
       {/* ── 选择控件 ─────────────────────────────────────────── */}
-      <FeaturePanel title="选择控件" description="SelectField · FilePicker · DirPicker">
+      <FeaturePanel title="选择控件" description="SelectField · FilePicker · DirPicker；文件选择器内置 FileDropZone">
         <div className="space-y-3">
           <FormField label="输出格式">
             <SelectField
@@ -356,7 +411,7 @@ export function GalleryTab() {
           <div className="flex items-center gap-4 flex-wrap">
             {/* 打开/关闭自管理, 默认对齐 left */}
             <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-              <span>扮手（align=left）</span>
+              <span>扳手（align=left）</span>
               <PopoverPanel trigger={<WrenchIcon />} align="left" minWidth={200}>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 pb-1.5">服务设置</p>
                 <div className="space-y-2">
@@ -402,7 +457,7 @@ export function GalleryTab() {
           <SectionTitle>受控模式</SectionTitle>
           <div className="flex items-center gap-3 flex-wrap">
             <Button size="sm" variant="secondary" onClick={() => setPopoverOpen(o => !o)}>
-              {popoverOpen ? '关闭面板' : '外部截开'}
+              {popoverOpen ? '关闭面板' : '外部打开'}
             </Button>
             <PopoverPanel
               trigger={<WrenchIcon size={16} />}
@@ -414,7 +469,7 @@ export function GalleryTab() {
               <TextInput flex value={popoverText} onChange={setPopoverText} placeholder="任意输入…" />
               <p className="mt-2 text-xs text-gray-400">当前内容：{popoverText || '（空）'}</p>
             </PopoverPanel>
-            <span className="text-xs text-gray-400">按鈕状态：{popoverOpen ? '已开启' : '已关闭'}</span>
+            <span className="text-xs text-gray-400">按钮状态：{popoverOpen ? '已开启' : '已关闭'}</span>
           </div>
         </div>
       </FeaturePanel>
@@ -521,9 +576,9 @@ export function GalleryTab() {
         </div>
       </FeaturePanel>
 
-      <FeaturePanel title="ImageGrid + HTML 导出" description="图片灯箱支持缩放、平移和键盘导航；导出工具生成可离线打开的 HTML 快照">
+      <FeaturePanel title="ImageGrid + HTML 导出" description="ClickableImage 灯箱支持缩放、平移和多图键盘导航；导出工具生成离线 HTML 快照">
         <div className="space-y-3">
-          <ImageGrid images={[{ src: demoPixelSrc, alt: '64 × 64 渐变示例' }]} />
+          <ImageGrid images={demoImages} />
           <div ref={exportPreviewRef} className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">可导出的渲染结果</h3>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">样式与可读取图片会被内联到独立 HTML 文件中。</p>
