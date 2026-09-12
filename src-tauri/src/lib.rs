@@ -379,11 +379,6 @@ async fn get_backend_port(state: tauri::State<'_, BackendPort>) -> Result<String
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // This must remain the first plugin so a second launch exits before it
-        // can create another window or packaged backend process.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            show_main_window(app);
-        }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
@@ -404,28 +399,12 @@ pub fn run() {
         .manage(BackendPort(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![get_backend_port])
         .setup(|app| {
-            // Platform configuration cannot safely override one field in the
-            // windows array without replacing the shared window definition.
-            let window_config = app
-                .config()
-                .app
-                .windows
-                .iter()
-                .find(|config| config.label == "main")
+            // The main window is created by Tauri from the shared window
+            // configuration before setup runs. Reusing it here avoids a
+            // second native window construction during macOS launch.
+            let window = app
+                .get_webview_window("main")
                 .ok_or("Main window configuration is missing")?;
-            let window_builder = tauri::WebviewWindowBuilder::from_config(app, window_config)?;
-
-            #[cfg(target_os = "windows")]
-            let window_builder = window_builder.decorations(false);
-
-            #[cfg(target_os = "macos")]
-            let window_builder = window_builder
-                .decorations(true)
-                .title_bar_style(tauri::TitleBarStyle::Overlay)
-                .hidden_title(true)
-                .traffic_light_position(tauri::LogicalPosition::new(12.0, 16.0));
-
-            let window = window_builder.build()?;
 
             #[cfg(debug_assertions)]
             {

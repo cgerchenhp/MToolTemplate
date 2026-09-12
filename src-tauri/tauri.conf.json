@@ -10,13 +10,12 @@
     "beforeBuildCommand": "npm run build && npm run build:backend"
   },
   "app": {
-    "macOSPrivateApi": true,
+    "macOSPrivateApi": false,
     "windows": [
       {
         "title": "Tauri React Python Template",
         "width": 1280,
         "height": 800,
-        "create": false,
         "resizable": true,
         "fullscreen": false,
         "decorations": true
