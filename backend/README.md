@@ -1,135 +1,100 @@
 # Backend 开发文档
 
-本后端基于 **Python + FastAPI + Uvicorn**，作为 此 App 桌面应用（Tauri + React）的本地计算服务
-
----
+后端基于 Python、FastAPI 和 Uvicorn，作为 Tauri 桌面应用的本地服务，只监听 `127.0.0.1`。
 
 ## 目录结构
 
-```
+```text
 backend/
-├── main.py              # 应用入口：FastAPI 实例、中间件、启动逻辑
-├── README.md            # 本文档
-├── core/                # 核心业务逻辑（不直接依赖 FastAPI）
-│   ├── __init__.py
-│   ├── log.py           # 日志初始化（init_logging / get_log_queue）
-├── routers/             # 按业务域拆分的路由模块
-│   ├── __init__.py
-└── tests/               # 后端自动化测试
+├── main.py              # FastAPI 实例、通用端点、启动与退出逻辑
+├── core/
+│   ├── log.py           # 日志初始化和 SSE 日志队列
+│   └── runtime_config.py  # 端口和项目配置读取
+├── routers/
+│   └── notify.py        # 通知推送和 SSE 路由
+└── tests/               # 后端测试
 ```
 
-运行时与构建依赖统一位于项目根目录的 `requirements.txt`。
-
----
+运行时与打包依赖统一位于项目根目录的 `requirements.txt`。
 
 ## 快速启动
 
 ```bash
-# 安装依赖
 pip install -r requirements.txt
-
-# 启动开发服务
 python backend/main.py
 ```
 
-启动后会在控制台输出 `BACKEND_PORT:<port>`，前端通过环境变量 `VITE_BACKEND_URL` 或默认地址 `http://127.0.0.1:7090` 连接。
+也可以在项目根目录运行：
 
----
-
-## API 规范
-
-### 路径前缀
-
-所有端点统一以 `/api` 开头：
-
-| 方法   | 路径                        | 说明                         |
-|--------|-----------------------------|------------------------------|
-| GET    | `/api/hello`                | 健康检查（前端心跳探测）      |
-| GET    | `/api/sysinfo`              | 返回操作系统与 Python 版本信息 |
-
-### 响应结构
-
-成功时返回具体数据对象；失败时统一返回：
-
-```json
-{
-  "error": "<错误码>",
-  "message": "<可读描述>"
-}
+```bash
+npm run dev:backend
 ```
 
-HTTP 状态码：`400` 参数错误，`422` 请求体校验失败，`500` 服务器内部错误。
+启动后会在控制台输出 `BACKEND_PORT:<port>`。前端通过 Tauri IPC 获取端口，也可以通过 `VITE_BACKEND_URL` 覆盖默认后端地址。
 
----
+## API
 
-## 开发原则
+所有端点统一以 `/api` 开头。
 
-1. **职责分离**：路由层（`routers/`）只负责参数提取与响应序列化；业务逻辑全部放入对应 `services/` 模块，保持可独立测试。
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/hello` | 健康检查 |
+| `GET` | `/api/sysinfo` | 操作系统、Python 和机器信息 |
+| `GET` | `/api/logs/stream` | 后端日志 SSE |
+| `POST` | `/api/echo` | 消息回声，用于验证请求链路 |
+| `POST` | `/api/debug/emit-logs` | 发送各等级测试日志 |
+| `GET` | `/api/notify/stream` | 结构化通知 SSE |
+| `POST` | `/api/notify/push` | 向后端推送一条通知 |
+| `POST` | `/api/notify/trigger` | 延迟发送演示通知 |
 
-2. **类型安全**：所有请求体与响应体使用 Pydantic 模型定义，严禁使用裸 `dict` 作为接口契约。
+## 响应约定
 
-3. **本地优先**：整个服务仅监听 `127.0.0.1`，不对外暴露，CORS 在生产构建中应收紧至仅允许 `tauri://localhost`。
-
-4. **无状态设计**：单次请求完成所有处理，避免在内存中缓存用户数据；大文件处理完毕后立即释放资源。
-
-5. **失败快速**：在函数入口处校验参数（文件格式、尺寸限制等），遇到不符合预期的输入立即返回 `400`，不进入后续计算流程。
-
-6. **依赖最小化**：引入新的第三方库前先评估是否可用标准库或已有依赖实现，避免依赖树膨胀影响打包体积。
-
----
-
-### 错误处理
+业务端点直接返回数据对象。请求体校验失败时由 FastAPI 返回 `422` 和 `detail`；主动抛出 `HTTPException` 时同样使用 `detail` 描述错误：
 
 ```python
 from fastapi import HTTPException
 
-# 推荐写法：明确状态码与可读消息
-raise HTTPException(status_code=400, detail="不支持的图片格式，仅接受 JPEG/PNG/WEBP")
+raise HTTPException(status_code=400, detail="不支持的图片格式")
 ```
 
-使用 FastAPI 的全局 `exception_handler` 捕获未预期异常，记录日志后返回统一 `500` 格式，**不要**将原始堆栈信息暴露给调用方。
+当前模板没有统一包装成 `{ "error": ..., "message": ... }` 的全局异常处理器。如果项目需要固定错误协议，应在 `main.py` 中显式注册异常处理器并同步更新本说明。
 
-### 日志
+## 开发原则
 
-日志配置集中在 `core/log.py`，基于 Python 标准库 `logging` 实现，遵循**配置一次、到处使用**的原则。
+1. 路由层负责参数提取与响应序列化，复杂逻辑放入独立模块，避免继续膨胀 `main.py`。
+2. 请求体和响应体使用 Pydantic 模型定义，保持接口契约明确。
+3. 服务仅监听回环地址；CORS 默认只允许 Tauri WebView、localhost 和 `127.0.0.1`。
+4. 单次请求完成处理，避免在内存中长期缓存用户数据。
+5. 在入口处校验文件格式、尺寸和路径等输入，失败时尽早返回。
+6. 不把 API Key、Token 或本地绝对路径写入源码和测试数据。
 
-#### 架构原理
+## 日志
 
-Python logger 采用层级继承机制。`init_logging()` 在应用启动时向**根 logger** 注册两个 handler：
+日志配置集中在 `core/log.py`。`init_logging()` 在应用启动时向根 logger 注册：
 
-- `StreamHandler` — 输出到控制台；
-- `_QueueHandler` — 将每条记录放入内存队列，由 SSE 端点 `/api/logs/stream` 实时推送给前端。
+- `StreamHandler`：输出到控制台。
+- `_QueueHandler`：写入内存队列，由 `/api/logs/stream` 推送到前端。
 
-所有子 logger（即各模块通过 `getLogger(__name__)` 获取的）都会自动继承这两个 handler，无需任何额外配置。
-
-#### 在新模块中使用日志
+业务模块直接使用标准 logging：
 
 ```python
 import logging
 
 logger = logging.getLogger(__name__)
-
-def some_function():
-    logger.info("处理中: %s", some_value)
-    logger.warning("注意: %s", warning_msg)
-    logger.exception("发生错误")  # 自动附加 traceback
+logger.info("处理中: %s", value)
 ```
 
-> **不要** 从 `main.py` 或其他模块导入 logger 实例；直接使用 `logging.getLogger(__name__)` 即可。
+不要从 `main.py` 或其他模块导入 logger 实例。
 
-#### 日志级别
+## 测试
 
-- 开发模式（`reload=True`）：`INFO` — 打印所有请求与业务日志；
-- 生产 sidecar 模式（打包后）：`WARNING` — 减少噪音，仅保留警告与错误。
+测试位于 `backend/tests/`，文件命名使用 `test_<模块名>.py`。
 
-级别可在 `main.py` 的 `init_logging(level=...)` 调用处统一调整。
+```bash
+python -m pytest backend/tests -v
+```
 
-### 测试
-
-- 使用 `pytest` + `httpx.AsyncClient` 对 `routers/` 进行单元测试，业务逻辑层在不启动 HTTP 服务器的情况下直接测试 `services/`。
-- 测试文件放在 `backend/tests/`，命名规则 `test_<模块名>.py`。
-
----
+当前运行环境还需要安装 `pytest`。如果测试夹具未来引入 HTTP 客户端或其他测试依赖，应同步维护开发依赖说明。
 
 ## 依赖说明
 
@@ -137,6 +102,7 @@ def some_function():
 |----|------|
 | `fastapi` | Web 框架与路由 |
 | `uvicorn` | ASGI 服务器 |
-| `pydantic` | 数据校验（FastAPI 内置） |
+| `pydantic` | 数据校验 |
+| `pyinstaller` | 发布阶段的 Python sidecar 打包 |
 
-新增依赖时同步更新 `requirements.txt`，并在此表格中补充说明。
+新增依赖时同步更新 `requirements.txt` 和本表。
