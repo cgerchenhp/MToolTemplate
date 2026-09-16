@@ -5,10 +5,42 @@ export const isTauri = Boolean(
 )
 const FALLBACK_URL =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? 'http://127.0.0.1:7090'
+const BACKEND_READY_TIMEOUT_MS = 30_000
+const BACKEND_READY_RETRY_MS = 150
+const BACKEND_READY_PROBE_TIMEOUT_MS = 1_000
 
 let _resolvedUrl: string | null = null
 // 单例 Promise：所有并发调用共享同一个 IPC，避免启动时多个 hook 重复等待
 let _resolvePromise: Promise<string> | null = null
+
+/**
+ * The sidecar announces its port before importing heavyweight routers and
+ * starting Uvicorn. Wait for the HTTP server to accept requests so initial
+ * hooks do not fail once and then remain without data.
+ */
+async function waitForBackendReady(baseUrl: string): Promise<void> {
+  const deadline = Date.now() + BACKEND_READY_TIMEOUT_MS
+
+  while (Date.now() < deadline) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      BACKEND_READY_PROBE_TIMEOUT_MS,
+    )
+    try {
+      const response = await fetch(`${baseUrl}/api/hello`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+      if (response.ok) return
+    } catch {
+      // The sidecar may still be importing dependencies or starting Uvicorn.
+    } finally {
+      clearTimeout(timeoutId)
+    }
+    await new Promise(resolve => setTimeout(resolve, BACKEND_READY_RETRY_MS))
+  }
+}
 
 export async function resolveBackendUrl(): Promise<string> {
   if (_resolvedUrl) return _resolvedUrl
@@ -17,7 +49,9 @@ export async function resolveBackendUrl(): Promise<string> {
       if (isTauri) {
         try {
           const port = await invoke<string>('get_backend_port')
-          return `http://127.0.0.1:${port}`
+          const url = `http://127.0.0.1:${port}`
+          await waitForBackendReady(url)
+          return url
         } catch {
           // fall through to fallback
         }
