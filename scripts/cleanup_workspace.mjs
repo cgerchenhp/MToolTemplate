@@ -20,7 +20,7 @@ if (args.includes('--help')) {
     '',
     '  report  Show reclaimable disk usage without deleting anything.',
     '  build   Remove generated build/debug outputs but preserve release-portable and artifacts.',
-    '  deep    Also remove release-portable, node_modules, and .venv.',
+    '  deep    Also remove all Cargo/Tauri build outputs and release-portable.',
     '',
     'Options:',
     '  --dry-run  Preview the selected cleanup without deleting.',
@@ -56,8 +56,6 @@ workspacePath('src-tauri/binaries', 'staged PyInstaller sidecar')
 
 if (profile === 'deep') {
   workspacePath('src-tauri/target', 'all Cargo/Tauri build outputs')
-  workspacePath('node_modules', 'npm dependencies (restore with npm install)')
-  workspacePath('.venv', 'Python virtual environment (restore from requirements.txt)')
 } else {
   workspacePath('src-tauri/target/debug', 'Cargo/Tauri debug output')
   workspacePath('src-tauri/target/release', 'Cargo/Tauri release intermediates and bundles')

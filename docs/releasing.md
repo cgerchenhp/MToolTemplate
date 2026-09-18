@@ -60,6 +60,6 @@ npm run cleanup
 npm run cleanup:deep
 ```
 
-普通清理会删除构建中间文件和缓存，但保留 `src-tauri/target/release-portable` 与 `artifacts/`。深度清理会额外删除 `target`、`node_modules`、`.venv` 和 Portable 目录。
+普通清理会删除构建中间文件和缓存，但保留 `src-tauri/target/release-portable` 与 `artifacts/`。深度清理会额外删除完整的 `src-tauri/target` 与 Portable 目录，但保留 `node_modules` 和 `.venv`。
 
 如果当前 Portable 版本尚未归档，深度清理会拒绝执行。只有明确要丢弃该版本时，才应使用 `--force`。
