@@ -5,6 +5,7 @@ Usage:
     python scripts/bump_version.py          # 0.2.0 -> 0.2.1
     python scripts/bump_version.py minor    # 0.2.0 -> 0.3.0
     python scripts/bump_version.py major    # 0.2.0 -> 1.0.0
+    python scripts/bump_version.py --set 1.2.3
     python scripts/bump_version.py --dry-run
 """
 
@@ -40,15 +41,53 @@ def parse_args() -> argparse.Namespace:
         "part",
         nargs="?",
         choices=("patch", "minor", "major"),
-        default="patch",
+        default=None,
         help="version segment to bump (default: patch)",
+    )
+    parser.add_argument(
+        "--set",
+        dest="target_version",
+        metavar="X.Y.Z",
+        help="set an explicit version that is greater than the current version",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="print the planned version without changing files",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.part is not None and args.target_version is not None:
+        parser.error("--set cannot be combined with patch, minor, or major")
+    if args.target_version is not None and not VERSION_RE.fullmatch(args.target_version):
+        parser.error("--set must use the x.y.z format")
+    if args.part is None and args.target_version is None:
+        args.part = "patch"
+    return args
+
+
+def version_key(version: str) -> tuple[int, int, int]:
+    if not VERSION_RE.fullmatch(version):
+        raise ValueError(f"Unexpected version format: {version!r}")
+    return tuple(map(int, version.split(".")))
+
+
+def resolve_target_version(
+    current: str,
+    part: str | None,
+    explicit_version: str | None,
+) -> tuple[str, str]:
+    if explicit_version is None:
+        selected_part = part or "patch"
+        return bump_version(current, selected_part), selected_part
+
+    if not VERSION_RE.fullmatch(explicit_version):
+        raise ValueError("--set must use the x.y.z format")
+    if version_key(explicit_version) <= version_key(current):
+        raise ValueError(
+            f"--set version must be greater than the current version ({current}); "
+            f"received {explicit_version}"
+        )
+    return explicit_version, "set"
 
 
 def read_json(path: Path) -> dict:
@@ -120,8 +159,8 @@ def main() -> None:
         details = ", ".join(f"{path}={value!r}" for path, value in mismatches.items())
         raise ValueError(f"Version files are already out of sync with package.json ({old}): {details}")
 
-    new = bump_version(old, args.part)
-    print(f"[version:bump] {old} -> {new} ({args.part})")
+    new, mode = resolve_target_version(old, args.part, args.target_version)
+    print(f"[version:bump] {old} -> {new} ({mode})")
     if args.dry_run:
         return
 

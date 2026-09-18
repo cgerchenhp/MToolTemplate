@@ -10,9 +10,10 @@
 npm run version:bump
 npm run version:bump -- minor
 npm run version:bump -- major
+npm run version:bump -- --set 1.2.3
 ```
 
-不带参数时升级 patch 版本。脚本会先检查所有版本文件是否一致，发现不一致时拒绝修改。
+不带参数时升级 patch 版本。`--set` 可以指定精确的 `x.y.z` 版本，但目标版本必须严格大于当前版本；脚本会先检查所有版本文件是否一致，发现不一致时拒绝修改。
 
 ## 本地构建
 
